@@ -11,7 +11,7 @@ A simple Python application using Tkinter, a Python GUI toolkit, that allows use
 ### Prerequisites
 - Python (version 3.x)
 - Tkinter library (usually included with Python installation)
-- 
+
 ### Instructions
 1. Clone the repository:
 
