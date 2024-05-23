@@ -1,6 +1,7 @@
 from tkinter import *
 from re import findall
 from urllib.request import urlopen
+from sqlite3 import *
 
 # Font variables
 title_font = ("Verdana", 24, "bold")
@@ -31,10 +32,11 @@ SBS_pattern = '"title":"(.*?)",'
 
 # String variables
 title = "Weather News Mixer"
-weatherzone_page_name = " [Weatherzone - "
-courier_mail_page_name = " [Courier Mail - "
-ABC_page_name = " [ABC News - "
-SBS_page_name = " [SBS News]"
+news_sources = ["ABC News", "SBS News", "Weatherzone", "Courier Mail"]
+ABC_page_name = " [" + news_sources[0] + " - "
+SBS_page_name = " [" + news_sources[1] + "]"
+weatherzone_page_name = " [" + news_sources[2] + " - "
+courier_mail_page_name = " [" + news_sources[3] + " - "
 
 def regex_live_file(file_path, page_pattern):
     """
@@ -131,12 +133,6 @@ def preview_selections():
     weatherzone_count = int(weatherzone_news_spinbox.get())
     courier_mail_count = int(courier_mail_news_spinbox.get())
 
-    # Extract titles and dates from various article sources
-    ABC_extract = regex_live_file(ABC_file_path, ABC_pattern)
-    SBS_extract = regex_live_file(SBS_file_path, SBS_pattern)
-    weatherzone_extract = regex_archived_file(weatherzone_file_path, 2, weatherzone_date_pattern)
-    courier_mail_extract = regex_archived_file(courier_mail_file_path, 1, courier_mail_date_pattern)
-    
     # Enable text widget for editing and clear the text widget
     news_preview_text.config(state = NORMAL)
     news_preview_text.delete(1.0, END)
@@ -157,6 +153,79 @@ def preview_selections():
 
     # Disable text widget after editing
     news_preview_text.config(state = DISABLED)
+
+def save_to_SQL():
+    """
+    Save selected news articles to an SQLite database.
+
+    This method extracts the number of selected articles from the various news feeds based on user input from 
+    spinboxes, connects to an SQLite database (creating it if it doesn't exist), creates a table for storing news 
+    articles, clears any existing data in the table, and inserts the selected news articles into the table.
+
+    Example:
+        >>> save_to_SQL()
+        # Saves the selected news articles to the 'news_log.db' SQLite database.
+    """
+    # Extract counts of articles from spinboxes
+    ABC_count = int(ABC_news_spinbox.get())
+    SBS_count = int(SBS_news_spinbox.get())
+    weatherzone_count = int(weatherzone_news_spinbox.get())
+    courier_mail_count = int(courier_mail_news_spinbox.get())
+    
+    # Connect to SQLite3 database (create if not exists)
+    SQL_connect = connect("news_log.db")
+
+    # Create a cursor object 
+    SQL_cursor = SQL_connect.cursor()
+
+    # Create a table
+    SQL_cursor.execute('''CREATE TABLE IF NOT EXISTS selected_stories (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        headline TEXT NOT NULL,
+                        news_feed TEXT NOT NULL,
+                        publication_date TEXT NOT NULL
+                    )''')
+    
+    # Clear data in table
+    SQL_cursor.execute('''DELETE FROM `selected_stories`''')
+
+    # Insert selected news articles using queries into SQLite database
+    if ABC_count > 0:
+        for i in range(ABC_count):
+            SQL_cursor.execute('''
+                                INSERT INTO selected_stories (headline, news_feed, publication_date)
+                                VALUES (?, ?, ?)
+                            ''', (ABC_extract[0][i], news_sources[0], ABC_extract[1][i]))
+    if SBS_count > 0:
+        for i in range(SBS_count):
+            SQL_cursor.execute('''
+                                INSERT INTO selected_stories (headline, news_feed, publication_date)
+                                VALUES (?, ?, ?)
+                            ''', (SBS_extract[i], news_sources[1], "N/A"))
+    if weatherzone_count > 0:
+        for i in range(weatherzone_count):
+            SQL_cursor.execute('''
+                                INSERT INTO selected_stories (headline, news_feed, publication_date)
+                                VALUES (?, ?, ?)
+                            ''', (weatherzone_extract[0][i], news_sources[2], weatherzone_extract[1][0]))
+    if courier_mail_count > 0:
+        for i in range(courier_mail_count):
+            SQL_cursor.execute('''
+                                INSERT INTO selected_stories (headline, news_feed, publication_date)
+                                VALUES (?, ?, ?)
+                            ''', (courier_mail_extract[0][i], news_sources[3], courier_mail_extract[1][0]))
+
+    # Commit changes
+    SQL_connect.commit()
+
+    # Close the connection
+    SQL_connect.close()
+   
+# Extract titles and dates from various article sources
+ABC_extract = regex_live_file(ABC_file_path, ABC_pattern)
+SBS_extract = regex_live_file(SBS_file_path, SBS_pattern)
+weatherzone_extract = regex_archived_file(weatherzone_file_path, 2, weatherzone_date_pattern)
+courier_mail_extract = regex_archived_file(courier_mail_file_path, 1, courier_mail_date_pattern)
 
 # Variables for number of available titles for each news article source
 ABC_num_titles = len(regex_live_file(ABC_file_path, ABC_pattern)[0])
@@ -202,7 +271,7 @@ button_frame.grid(row = 1, column = 1, padx = 10)
 # Button widgets
 preview_button = Button(button_frame, text = "Preview Selections", bg = widget_colour, activebackground = label_colour, command = preview_selections)
 export_button = Button(button_frame, text = "Export Selections", bg = widget_colour, activebackground = label_colour)
-save_button = Button(button_frame, text = "Save Selections", bg = widget_colour, activebackground = label_colour)
+save_button = Button(button_frame, text = "Save Selections", bg = widget_colour, activebackground = label_colour, command = save_to_SQL)
 
 # Pack all button widgets
 preview_button.pack(padx = 15, pady = 10)
@@ -243,4 +312,5 @@ news_preview_scrollbar.config(command = news_preview_text.yview)
 news_preview_text.pack(side = LEFT)
 news_preview_scrollbar.pack(side = RIGHT, fill = Y)
 
+# Display Tkinter GUI
 root.mainloop()
