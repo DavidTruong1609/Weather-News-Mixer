@@ -1,6 +1,6 @@
 # News Feed Agreggator
 ## Weather News Mixer
-A simple Python application using Tkinter, a Python GUI toolkit, that allows users to aggregate various different news article sources to display via previews within the application, export to a HTML page, or save into a SQLite database.
+A simple Python application using Tkinter, a Python GUI toolkit, that allows users to aggregate various different news article sources to display via previews within the application, export to an HTML page, or save into a SQLite database.
 
 ## Features
 - Fetches weather-related news headlines from various sources.
